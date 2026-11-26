@@ -7,6 +7,7 @@ import {
   GRADE_BALLOONS,
   JUDGE_BALLOON_OFFSET,
   REVEAL_TIME,
+  SHOT_COUNT,
   TARGET_RADIUS,
   calloutForStreak,
 } from "../engine/constants.mjs";
@@ -169,6 +170,9 @@ function eventFromDiff(prev, state) {
     prev.shotIndex !== (state.shotIndex ?? 0) &&
     phase === "aim"
   ) {
+    if ((state.shotIndex ?? 0) === SHOT_COUNT && state.extended) {
+      return { kind: "extension" };
+    }
     return { kind: "next" };
   }
   return null;
@@ -277,11 +281,21 @@ export function syncFx(fx, state, dt, opts = {}) {
   const ev = eventFromDiff(fx.prev, state);
   if (ev?.kind === "shot") startKick(fx, ev, reduced);
   else if (ev?.kind === "reveal") startReveal(fx, ev, reduced);
-  else if (ev?.kind === "next") {
+  else if (ev?.kind === "next" || ev?.kind === "extension") {
     fx.bullet = null;
     fx.hole = null;
     fx.reveal = null;
     fx.kick = null;
+    if (ev.kind === "extension") {
+      addFloat(fx, {
+        kind: "callout",
+        text: "延長戦！",
+        yWu: -JUDGE_BALLOON_OFFSET,
+        color: "#6b3a10",
+        scale: 1.2,
+        life: 1.2,
+      });
+    }
   }
 
   if (t > 0) {

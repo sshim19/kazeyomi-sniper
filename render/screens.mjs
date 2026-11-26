@@ -109,17 +109,28 @@ export function bindScreens(root = document) {
     hide(el.hud, true);
     setHints(false, false);
     const score = Math.max(0, Math.floor(Number(data.score) || 0));
-    if (el.overScore) el.overScore.textContent = `${formatScore(score)}点でした`;
+    const grades = Array.isArray(data.grades) ? data.grades : [];
+    const hits = grades.filter((g) => g && g !== "miss").length;
+    if (el.overScore) {
+      el.overScore.textContent =
+        hits > 0
+          ? `${formatScore(score)}点でした。${formatScore(hits)}発あたりました。`
+          : `${formatScore(score)}点でした`;
+    }
     const core = Math.max(0, Math.floor(Number(data.core) || 0));
     if (el.overCore) {
       el.overCore.textContent =
         core <= 0 ? "どまんなかはありません" : `${GRADE_LABELS.core} ${formatScore(core)}発`;
     }
     if (el.overShots) {
-      const grades = Array.isArray(data.grades) ? data.grades : [];
-      const marks = [];
-      for (let i = 0; i < SHOT_COUNT; i++) marks.push(gradeMark(grades[i]));
-      el.overShots.textContent = marks.join("・");
+      const daily = [];
+      for (let i = 0; i < SHOT_COUNT; i++) daily.push(gradeMark(grades[i]));
+      if (grades.length > SHOT_COUNT) {
+        const ext = grades.slice(SHOT_COUNT).map((g) => gradeMark(g));
+        el.overShots.textContent = `${daily.join("・")} ／ ${ext.join("・")}`;
+      } else {
+        el.overShots.textContent = daily.join("・");
+      }
     }
     const today = Math.max(0, Math.floor(Number(data.todayBestScore) || 0));
     const best = Math.max(0, Math.floor(Number(data.bestScore) || 0));
@@ -141,14 +152,23 @@ export function bindScreens(root = document) {
    */
   function updateHud(data) {
     const count = Math.max(1, Math.floor(Number(data.shotCount) || SHOT_COUNT));
-    const index = Math.min(count, Math.max(1, Math.floor(Number(data.shotIndex) || 0) + 1));
+    const index = Math.max(1, Math.floor(Number(data.shotIndex) || 0) + 1);
+    const extended = !!data.extended || index > count;
     if (el.hudShot) {
       el.hudShot.replaceChildren();
-      el.hudShot.append(document.createTextNode(`${index} / ${count}`));
-      const unit = document.createElement("span");
-      unit.className = "hud-unit";
-      unit.textContent = "発";
-      el.hudShot.append(unit);
+      if (extended) {
+        el.hudShot.append(document.createTextNode(String(index)));
+        const unit = document.createElement("span");
+        unit.className = "hud-unit";
+        unit.textContent = "発目";
+        el.hudShot.append(unit);
+      } else {
+        el.hudShot.append(document.createTextNode(`${index} / ${count}`));
+        const unit = document.createElement("span");
+        unit.className = "hud-unit";
+        unit.textContent = "発";
+        el.hudShot.append(unit);
+      }
     }
     if (el.hudDist) {
       const dist = Math.max(0, Math.round(Number(data.distance) || 0));

@@ -120,10 +120,13 @@ export function saveBests({ dateJst, score }, storage = globalThis.localStorage)
 
 /**
  * 改行3行。風やねらいの攻略は出さない。点数はカンマなし。
- * @param {{ dateLabel: string, score: number }} rec
+ * 発数は撃った数（到達した発）。
+ * @param {{ dateLabel: string, score: number, shots?: number }} rec
  */
-export function shareText({ dateLabel, score }) {
+export function shareText({ dateLabel, score, shots = 0 }) {
   const n = Math.max(0, Math.floor(Number(score) || 0));
+  const k = Math.max(0, Math.floor(Number(shots) || 0));
+  if (k > 0) return `${GAME_TITLE}\n${dateLabel}\n${k}発 ${n}点`;
   return `${GAME_TITLE}\n${dateLabel}\n${n}点`;
 }
 
