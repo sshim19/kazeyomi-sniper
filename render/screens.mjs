@@ -1,0 +1,205 @@
+/** タイトル / HUD / 縦向き案内 / 終了の DOM と文言。DESIGN.md の文言をそのまま使う。 */
+
+import { GRADE_LABELS, SHOT_COUNT } from "../engine/constants.mjs";
+import { formatScore, gradeMark } from "./share.mjs";
+
+/**
+ * @param {ParentNode} [root]
+ */
+export function bindScreens(root = document) {
+  const el = {
+    body: document.body,
+    html: document.documentElement,
+    app: root.querySelector("#app"),
+    playBar: root.querySelector("#play-bar"),
+    hud: root.querySelector("#play-hud"),
+    hudShot: root.querySelector("#hud-shot"),
+    hudDist: root.querySelector("#hud-dist"),
+    hudScore: root.querySelector("#hud-score"),
+    hintAim: root.querySelector("#hint-aim"),
+    hintFire: root.querySelector("#hint-fire"),
+    title: root.querySelector("#screen-title"),
+    titleHeading: root.querySelector("#screen-title h1"),
+    titleDate: root.querySelector("#title-date"),
+    titleRecord: root.querySelector("#title-record"),
+    btnStart: root.querySelector("#btn-start"),
+    btnMute: root.querySelector("#btn-mute"),
+    over: root.querySelector("#screen-over"),
+    overHeading: root.querySelector("#screen-over h1"),
+    overScore: root.querySelector("#over-score"),
+    overCore: root.querySelector("#over-core"),
+    overShots: root.querySelector("#over-shots"),
+    overToday: root.querySelector("#over-today"),
+    overBest: root.querySelector("#over-best"),
+    overNewBest: root.querySelector("#over-new-best"),
+    overNewToday: root.querySelector("#over-new-today"),
+    btnRetry: root.querySelector("#btn-retry"),
+    btnShareX: root.querySelector("#btn-share-x"),
+    btnShareLine: root.querySelector("#btn-share-line"),
+    btnQuit: root.querySelector("#btn-quit"),
+    portrait: root.querySelector("#screen-portrait"),
+    canvas: root.querySelector("#game"),
+  };
+
+  function setPlaying(on) {
+    el.body?.classList.toggle("is-playing", !!on);
+    el.html?.classList.toggle("is-playing", !!on);
+    el.app?.classList.toggle("is-playing", !!on);
+  }
+
+  function hide(node, on) {
+    if (!node) return;
+    node.hidden = !!on;
+  }
+
+  function focusHeading(node) {
+    if (!node) return;
+    try {
+      node.focus({ preventScroll: true });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /**
+   * @param {{ dateLabel: string, bestScore: number | null }} data
+   */
+  function showTitle(data) {
+    setPlaying(false);
+    hide(el.title, false);
+    hide(el.over, true);
+    hide(el.playBar, false);
+    hide(el.btnQuit, true);
+    hide(el.hud, true);
+    setHints(false, false);
+    if (el.titleDate) el.titleDate.textContent = `今日の射場（${data.dateLabel}）`;
+    if (el.titleRecord) {
+      const best = data.bestScore;
+      el.titleRecord.textContent =
+        best == null || best <= 0 ? "記録はまだありません" : `最高記録 ${formatScore(best)}点`;
+    }
+    focusHeading(el.titleHeading);
+  }
+
+  function showPlay() {
+    setPlaying(true);
+    hide(el.title, true);
+    hide(el.over, true);
+    hide(el.playBar, false);
+    hide(el.btnQuit, false);
+    hide(el.hud, false);
+  }
+
+  /**
+   * @param {{
+   *   score: number,
+   *   todayBestScore: number | null,
+   *   bestScore: number | null,
+   *   isNewBest?: boolean,
+   *   isNewTodayBest?: boolean,
+   *   core?: number,
+   *   grades?: Array<string | null | undefined>,
+   * }} data
+   */
+  function showOver(data) {
+    setPlaying(false);
+    hide(el.title, true);
+    hide(el.over, false);
+    hide(el.playBar, true);
+    hide(el.hud, true);
+    setHints(false, false);
+    const score = Math.max(0, Math.floor(Number(data.score) || 0));
+    if (el.overScore) el.overScore.textContent = `${formatScore(score)}点でした`;
+    const core = Math.max(0, Math.floor(Number(data.core) || 0));
+    if (el.overCore) {
+      el.overCore.textContent =
+        core <= 0 ? "どまんなかはありません" : `${GRADE_LABELS.core} ${formatScore(core)}発`;
+    }
+    if (el.overShots) {
+      const grades = Array.isArray(data.grades) ? data.grades : [];
+      const marks = [];
+      for (let i = 0; i < SHOT_COUNT; i++) marks.push(gradeMark(grades[i]));
+      el.overShots.textContent = marks.join("・");
+    }
+    const today = Math.max(0, Math.floor(Number(data.todayBestScore) || 0));
+    const best = Math.max(0, Math.floor(Number(data.bestScore) || 0));
+    if (el.overToday) {
+      el.overToday.textContent =
+        today <= 0 ? "今日の記録はまだありません" : `今日の最高 ${formatScore(today)}点`;
+    }
+    if (el.overBest) {
+      el.overBest.textContent =
+        best <= 0 ? "これまでの記録はまだありません" : `これまでの最高 ${formatScore(best)}点`;
+    }
+    hide(el.overNewBest, !data.isNewBest);
+    hide(el.overNewToday, !data.isNewTodayBest);
+    focusHeading(el.overHeading);
+  }
+
+  /**
+   * @param {{ shotIndex?: number, shotCount?: number, distance?: number, score?: number }} data
+   */
+  function updateHud(data) {
+    const count = Math.max(1, Math.floor(Number(data.shotCount) || SHOT_COUNT));
+    const index = Math.min(count, Math.max(1, Math.floor(Number(data.shotIndex) || 0) + 1));
+    if (el.hudShot) {
+      el.hudShot.replaceChildren();
+      el.hudShot.append(document.createTextNode(`${index} / ${count}`));
+      const unit = document.createElement("span");
+      unit.className = "hud-unit";
+      unit.textContent = "発";
+      el.hudShot.append(unit);
+    }
+    if (el.hudDist) {
+      const dist = Math.max(0, Math.round(Number(data.distance) || 0));
+      el.hudDist.textContent = dist ? `${dist}m` : "";
+    }
+    if (el.hudScore) {
+      el.hudScore.replaceChildren();
+      el.hudScore.append(document.createTextNode(formatScore(data.score)));
+      const unit = document.createElement("span");
+      unit.className = "hud-unit";
+      unit.textContent = "点";
+      el.hudScore.append(unit);
+    }
+  }
+
+  /**
+   * @param {boolean} aim
+   * @param {boolean} fire
+   */
+  function setHints(aim, fire) {
+    hide(el.hintAim, !aim);
+    hide(el.hintFire, !fire);
+  }
+
+  /** @param {boolean} visible */
+  function setPortrait(visible) {
+    const on = !!visible;
+    el.body?.classList.toggle("is-portrait", on);
+    el.html?.classList.toggle("is-portrait", on);
+    el.app?.classList.toggle("is-portrait", on);
+    hide(el.portrait, !on);
+  }
+
+  /** @param {boolean} muted */
+  function setMuteUi(muted) {
+    const btn = el.btnMute;
+    if (!btn) return;
+    const on = !!muted;
+    btn.classList.toggle("is-muted", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on ? "音を出す" : "音を消す");
+  }
+
+  return {
+    el,
+    showTitle,
+    showPlay,
+    showOver,
+    updateHud,
+    setHints,
+    setPortrait,
+    setMuteUi,
+  };
+}
