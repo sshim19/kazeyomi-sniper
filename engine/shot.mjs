@@ -1,4 +1,4 @@
-/** dailyShots(rngState) → { shots, rngState }. Idempotent 5-shot stream. */
+/** dailyShots(rngState) → { shots, rngState }. Idempotent 5-shot stream. Extension shots follow the same stream. */
 
 import {
   SHOT_COUNT,
@@ -7,6 +7,10 @@ import {
   START_OFFSET_WU_MAX,
   START_OFFSET_WU_MIN,
   WIND_ANGLE_MAX,
+  EXT_DIST_MIN,
+  EXT_DIST_MAX,
+  EXT_WIND_MAX_START,
+  EXT_WIND_EXTRA,
   wuToMeters,
 } from "./constants.mjs";
 import { flightTime } from "./ballistic.mjs";
@@ -29,12 +33,11 @@ function emptyResult() {
 }
 
 /**
- * One shot record. Always consumes 8 RNG draws so the stream stays aligned:
+ * One shot record from a spec. Always consumes 8 RNG draws so the stream stays aligned:
  * wind speed, side, angle, offset magnitude, offset angle, swayPhiX, swayPhiY, skin.
  */
-export function makeShot(rngState, index) {
-  const spec = SHOT_TABLE[index] || SHOT_TABLE[0];
-  const distance = spec.distance;
+export function makeShotFromSpec(rngState, spec) {
+  const distance = Number(spec.distance) || 0;
   let a = rngState >>> 0;
 
   const speedRoll = rngRange(a, spec.windMin, spec.windMax);
@@ -79,6 +82,33 @@ export function makeShot(rngState, index) {
     ...emptyResult(),
   };
   return { shot, rngState: a >>> 0 };
+}
+
+/**
+ * One shot record. Always consumes 8 RNG draws so the stream stays aligned:
+ * wind speed, side, angle, offset magnitude, offset angle, swayPhiX, swayPhiY, skin.
+ */
+export function makeShot(rngState, index) {
+  const spec = SHOT_TABLE[index] || SHOT_TABLE[0];
+  return makeShotFromSpec(rngState, spec);
+}
+
+/**
+ * Extra shot after a 5-for-5. Consumes 1 distance draw plus the usual 8.
+ * Distance 60–260m and wind rise with extIndex (0 = first extra shot).
+ */
+export function makeExtShot(rngState, extIndex) {
+  const i = Math.max(0, Math.floor(Number(extIndex) || 0));
+  const t = Math.min(1, i / 8);
+  let a = rngState >>> 0;
+  const dMin = EXT_DIST_MIN + t * 80;
+  const dMax = 180 + t * (EXT_DIST_MAX - 180);
+  const distRoll = rngRange(a, dMin, dMax);
+  a = distRoll.a;
+  const distance = Math.max(EXT_DIST_MIN, Math.min(EXT_DIST_MAX, Math.round(distRoll.value)));
+  const windMax = EXT_WIND_MAX_START + Math.min(EXT_WIND_EXTRA, i * 0.15);
+  const windMin = Math.min(2.4 + i * 0.3, Math.max(EXT_WIND_MAX_START * 0.2, windMax - 0.6));
+  return makeShotFromSpec(a, { distance, windMin, windMax });
 }
 
 /**

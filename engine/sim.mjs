@@ -1,6 +1,7 @@
 /** tick(state, input, dt) → state. Aim, fire, flight, reveal, score. No DOM. */
 
 import {
+  EXT_SHOT_CAP,
   FIRE_LOCK,
   FIXED_DT,
   MAX_DT,
@@ -12,7 +13,7 @@ import {
 } from "./constants.mjs";
 import { gradeForRadius, impactPoint, pointsForGrade } from "./ballistic.mjs";
 import { hashSeed } from "./rng.mjs";
-import { dailyShots } from "./shot.mjs";
+import { dailyShots, makeExtShot } from "./shot.mjs";
 
 function cloneState(s) {
   return {
@@ -103,12 +104,47 @@ function applyInput(s, input) {
   applyFire(s, input);
 }
 
+function isHitGrade(grade) {
+  return grade != null && grade !== "miss";
+}
+
+function dailyAllHit(s) {
+  if (!s.shots || s.shots.length < SHOT_COUNT) return false;
+  for (let i = 0; i < SHOT_COUNT; i++) {
+    const sh = s.shots[i];
+    if (!sh?.fired || !isHitGrade(sh.grade)) return false;
+  }
+  return true;
+}
+
+function appendExtShot(s) {
+  const extIndex = Math.max(0, s.shots.length - SHOT_COUNT);
+  const next = makeExtShot(s.rngState, extIndex);
+  s.shots.push(next.shot);
+  s.rngState = next.rngState;
+  s.extended = true;
+}
+
 function advanceToNextShot(s) {
-  if (s.shotIndex + 1 >= SHOT_COUNT) {
+  const just = s.shots[s.shotIndex];
+  const nextIndex = s.shotIndex + 1;
+
+  if (nextIndex < SHOT_COUNT) {
+    loadShotAim(s, nextIndex);
+    return;
+  }
+
+  // After shot 5: extend only if all 5 were hits (rim or better). After that,
+  // keep going until the first miss, or the safety cap.
+  const allowExt =
+    (nextIndex === SHOT_COUNT ? dailyAllHit(s) : isHitGrade(just?.grade)) &&
+    nextIndex < SHOT_COUNT + EXT_SHOT_CAP;
+  if (!allowExt) {
     endRun(s);
     return;
   }
-  loadShotAim(s, s.shotIndex + 1);
+  if (s.shots.length <= nextIndex) appendExtShot(s);
+  loadShotAim(s, nextIndex);
 }
 
 function stepPhase(s, dt) {
@@ -181,6 +217,7 @@ export function createInitialState({ seed, dateJst, bestScore = 0, todayBestScor
     todayBestScore: todayBestScore || 0,
     hintAim: true,
     hintFire: true,
+    extended: false,
     stats: emptyStats(),
   };
 }

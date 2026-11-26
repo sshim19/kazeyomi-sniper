@@ -40,6 +40,13 @@ export const REVEAL_TIME = 1.05;
 export const FIXED_DT = 1 / 60;
 export const MAX_DT = 0.05;
 export const SHOT_COUNT = 5;
+/** Extra shots after a perfect 5-for-5 (rim or better). Safety cap only. */
+export const EXT_SHOT_CAP = 50;
+export const EXT_DIST_MIN = 60;
+export const EXT_DIST_MAX = 260;
+/** Daily table tops out at 6.2 m/s; extension may rise slightly above that. */
+export const EXT_WIND_MAX_START = 6.2;
+export const EXT_WIND_EXTRA = 1.0;
 
 export const CORE_R = 0.04;
 export const GOOD_R = 0.12;
