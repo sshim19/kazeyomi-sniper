@@ -5,6 +5,7 @@ import {
   VIEW_H,
   SCOPE_DIAMETER,
   FLAG_OFFSET_X,
+  EXT_WIND_MAX,
   PAD_LEFT,
   PAD_RIGHT,
   PAD_TOP,
@@ -242,7 +243,7 @@ function drawHills(ctx, view, cam, seed) {
 function drawGrass(ctx, view, cam, windX, windY, time, seed) {
   const speed = Math.hypot(windX, windY);
   const dir = Math.sign(windX || 1);
-  const lean = Math.min(0.9, speed / 6.2) * dir;
+  const lean = Math.min(0.9, speed / EXT_WIND_MAX) * dir;
   const flap = Math.sin(time * (3.2 + speed * 0.6));
   for (let i = 0; i < 42; i++) {
     const h = mix(seed, 400 + i * 19);
@@ -358,7 +359,7 @@ function drawFlag(ctx, view, cam, windX, windY, time) {
   const speed = Math.hypot(windX, windY);
   const level = windMeter(speed);
   const dir = Math.sign(windX || 1);
-  const lift = [0.12, 0.4, 0.68, 0.9][level - 1];
+  const lift = [0.12, 0.4, 0.68, 0.9, 0.98][level - 1];
   const flap = Math.sin(time * (3 + level * 2.2)) * (0.05 + level * 0.03);
   const baseX = FLAG_OFFSET_X;
   const baseY = GROUND_Y;
@@ -507,7 +508,7 @@ function drawWindsock(ctx, view, windX, windY, time) {
   const speed = Math.hypot(windX, windY);
   const level = windMeter(speed);
   const dir = Math.sign(windX || 1);
-  const lift = [0.22, 0.5, 0.74, 0.94][level - 1];
+  const lift = [0.22, 0.5, 0.74, 0.94, 1][level - 1];
   const t = Number(time) || 0;
   const flap = Math.sin(t * (3 + level * 2.1)) * (0.05 + level * 0.035);
 
@@ -569,13 +570,13 @@ function drawWindsock(ctx, view, windX, windY, time) {
   ctx.closePath();
   ctx.fill();
 
-  const gap = view.px(4);
-  const bw = view.px(7);
-  const heights = [view.px(7), view.px(10), view.px(13), view.px(16)];
-  const total = 4 * bw + 3 * gap;
-  let bx = w / 2 - view.px(10) - total;
+  const gap = view.px(3.5);
+  const bw = view.px(6);
+  const heights = [view.px(7), view.px(10), view.px(13), view.px(16), view.px(19)];
+  const total = 5 * bw + 4 * gap;
+  let bx = w / 2 - view.px(9) - total;
   const base = h / 2 - view.px(6);
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const bh = heights[i - 1];
     ctx.fillStyle = i <= level ? "#6b3a10" : rgba(TEXT, 0.18);
     ctx.fillRect(bx, base - bh, bw, bh);
@@ -588,7 +589,7 @@ function drawWindsock(ctx, view, windX, windY, time) {
 function drawForegroundGrass(ctx, view, windX, windY, time) {
   const speed = Math.hypot(windX, windY);
   const dir = Math.sign(windX || 1);
-  const lean = Math.min(0.9, speed / 6.2) * dir;
+  const lean = Math.min(0.9, speed / EXT_WIND_MAX) * dir;
   const flap = Math.sin((Number(time) || 0) * (3.2 + speed * 0.6));
   ctx.save();
   ctx.lineCap = "round";
