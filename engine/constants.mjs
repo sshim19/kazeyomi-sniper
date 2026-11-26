@@ -43,10 +43,10 @@ export const SHOT_COUNT = 5;
 /** Extra shots after a perfect 5-for-5 (rim or better). Safety cap only. */
 export const EXT_SHOT_CAP = 50;
 export const EXT_DIST_MIN = 60;
-export const EXT_DIST_MAX = 260;
-/** Daily table tops out at 6.2 m/s; extension may rise slightly above that. */
+export const EXT_DIST_MAX = 400;
+/** Daily table tops out at 6.2 m/s; extension climbs toward this cap. */
 export const EXT_WIND_MAX_START = 6.2;
-export const EXT_WIND_EXTRA = 1.0;
+export const EXT_WIND_MAX = 12;
 
 export const CORE_R = 0.04;
 export const GOOD_R = 0.12;
@@ -68,7 +68,7 @@ export const SEED_PREFIX = "kazeyomi-sniper:";
 export const SKINS = ["kami", "buriki", "tetsu"];
 
 /** Wind-sock ticks: 1 for [0, 1.7), 2 for [1.7, 3.2), 3 for [3.2, 4.8), 4 for 4.8+. */
-export const WIND_METER_BREAKS = [1.7, 3.2, 4.8, 6.5];
+export const WIND_METER_BREAKS = [1.7, 3.2, 4.8, 8.0];
 
 /**
  * Daily distances and wind-speed bands. Distances are the same every day;
@@ -135,13 +135,14 @@ export function swayMeters(phaseT, phiX, phiY, distance) {
   return { x: sw.x / k, y: sw.y / k };
 }
 
-/** 4-step wind sock for a wind speed in m/s. */
+/** Wind sock steps for a wind speed in m/s. Daily 5-shot bands still map to 1–4. */
 export function windMeter(speed) {
   const s = Math.abs(Number(speed) || 0);
   if (s < WIND_METER_BREAKS[0]) return 1;
   if (s < WIND_METER_BREAKS[1]) return 2;
   if (s < WIND_METER_BREAKS[2]) return 3;
-  return 4;
+  if (s < WIND_METER_BREAKS[3]) return 4;
+  return 5;
 }
 
 export function gradeForRadius(r) {

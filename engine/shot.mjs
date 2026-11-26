@@ -10,7 +10,7 @@ import {
   EXT_DIST_MIN,
   EXT_DIST_MAX,
   EXT_WIND_MAX_START,
-  EXT_WIND_EXTRA,
+  EXT_WIND_MAX,
   wuToMeters,
 } from "./constants.mjs";
 import { flightTime } from "./ballistic.mjs";
@@ -94,21 +94,29 @@ export function makeShot(rngState, index) {
 }
 
 /**
- * Extra shot after a 5-for-5. Consumes 1 distance draw plus the usual 8.
- * Distance 60–260m and wind rise with extIndex (0 = first extra shot).
+ * Extra shot after a 5-for-5. Consumes 1 distance draw, the usual 8, then 1 gust draw.
+ * Distance climbs from 60–260m toward 60–400m; indicated wind toward 12 m/s.
+ * windGust is a signed multiplier on the true wind at impact (0 on the daily five).
+ * The sock and flag show the indicated wind only — strong late winds are gusty.
  */
 export function makeExtShot(rngState, extIndex) {
   const i = Math.max(0, Math.floor(Number(extIndex) || 0));
-  const t = Math.min(1, i / 8);
+  const t = Math.min(1, i / 16);
   let a = rngState >>> 0;
-  const dMin = EXT_DIST_MIN + t * 80;
-  const dMax = 180 + t * (EXT_DIST_MAX - 180);
+  const dMin = EXT_DIST_MIN + t * 140;
+  const dMax = 260 + t * (EXT_DIST_MAX - 260);
   const distRoll = rngRange(a, dMin, dMax);
   a = distRoll.a;
   const distance = Math.max(EXT_DIST_MIN, Math.min(EXT_DIST_MAX, Math.round(distRoll.value)));
-  const windMax = EXT_WIND_MAX_START + Math.min(EXT_WIND_EXTRA, i * 0.15);
-  const windMin = Math.min(2.4 + i * 0.3, Math.max(EXT_WIND_MAX_START * 0.2, windMax - 0.6));
-  return makeShotFromSpec(a, { distance, windMin, windMax });
+  const windMax = EXT_WIND_MAX_START + t * (EXT_WIND_MAX - EXT_WIND_MAX_START);
+  const windMin = Math.min(3.0 + i * 0.35, Math.max(1.2, windMax - 0.7));
+  const built = makeShotFromSpec(a, { distance, windMin, windMax });
+  a = built.rngState;
+  const gustAmp = 0.025 + 0.014 * i;
+  const gustRoll = rngRange(a, -gustAmp, gustAmp);
+  built.shot.windGust = gustRoll.value;
+  built.rngState = gustRoll.a >>> 0;
+  return built;
 }
 
 /**

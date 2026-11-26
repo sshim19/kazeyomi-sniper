@@ -73,11 +73,12 @@ function applyFire(s, input) {
   const sw = swayMeters(s.phaseT, s.swayPhiX, s.swayPhiY, shot.distance);
   const usedX = s.aimX + sw.x;
   const usedY = s.aimY + sw.y;
+  const gust = Number(shot.windGust) || 0;
   const hit = impactPoint({
     aimX: usedX,
     aimY: usedY,
-    windX: shot.windX,
-    windY: shot.windY,
+    windX: shot.windX * (1 + gust),
+    windY: shot.windY * (1 + gust),
     distance: shot.distance,
   });
   const grade = gradeForRadius(hit.r);
