@@ -115,7 +115,8 @@ function finishRun(next) {
   state = next.status === "over" ? next : { ...next, status: "over" };
   const saved = saveBests({ dateJst, score: state.score });
   stored = { bestScore: saved.bestScore, todayBestScore: saved.todayBestScore };
-  lastShare = shareText({ dateLabel, score: state.score });
+  const firedShots = (state.shots || []).filter((s) => s?.fired).length;
+  lastShare = shareText({ dateLabel, score: state.score, shots: firedShots });
   const stats = state.stats || {};
   screens.showOver({
     score: state.score,
@@ -165,6 +166,7 @@ function paint() {
       shotCount: SHOT_COUNT,
       distance: shot?.distance,
       score: state.score,
+      extended: !!state.extended,
     });
     screens.setHints(!!state.hintAim, !!state.hintFire);
   }
@@ -209,6 +211,7 @@ function startPlay() {
     shotCount: SHOT_COUNT,
     distance: shot?.distance,
     score: state.score ?? 0,
+    extended: !!state.extended,
   });
   screens.setHints(state.hintAim !== false, state.hintFire !== false);
   paint();
